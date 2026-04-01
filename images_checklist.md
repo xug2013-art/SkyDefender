@@ -1,0 +1,66 @@
+# 图片资源透明背景检查一览表
+
+| 文件名 | 大小 | 是否有Alpha通道 | 背景是否透明 | 检查状态 | 处理备注 |
+|--------|------|----------------|--------------|----------|----------|
+| bg_level1_city.png | 1.6M | 否 | 否 | 通过 | 背景图无需处理 |
+| bg_level2_atmosphere.png | 993K | 否 | 否 | 通过 | 背景图无需处理 |
+| bg_level3_space.png | 2.2M | 否 | 否 | 通过 | 背景图无需处理 |
+| boss_hp_fill.png | 12K | 是 | 是 | 通过 | 自带透明背景 |
+| boss_interceptor_1.png | 54K | 是 | 是 | 通过 | 已修复，去除白色背景 |
+| boss_interceptor_1_damaged.png | 60K | 是 | 是 | 通过 | 已修复，去除白色背景 |
+| boss_mothership_core.png | 129K | 是 | 是 | 通过 | 可视化校验背景透明 |
+| boss_orbital_guardian.png | 111K | 是 | 是 | 通过 | 已用ffmpeg colorkey滤镜去除白色背景 |
+| boss_orbital_guardian_damaged.png | 80K | 是 | 是 | 通过 | 已用ffmpeg colorkey滤镜去除白色背景 |
+| btn_active.png | 34K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| btn_normal.png | 31K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| btn_pause.png | 11K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| bullet_cross.png | 1.9K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| bullet_drone.png | 2.1K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| bullet_enemy_curve.png | 2.1K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| bullet_enemy_normal.png | 2.0K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| bullet_enemy_spiral.png | 2.0K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| bullet_enemy_tracking.png | 1.8K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| bullet_grenade.png | 3.0K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| bullet_laser.png | 2.0K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| bullet_missile.png | 2.4K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| bullet_player_pulse.png | 2.6K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| bullet_ring.png | 1.8K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| bullet_shotgun.png | 1.9K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| effect_explode_1.png | 5.9K | 是 | 是 | 通过 | 已去除白色背景 |
+| effect_explode_2.png | 23K | 是 | 是 | 通过 | 已去除白色背景 |
+| effect_explode_3.png | 43K | 是 | 是 | 通过 | 已去除白色背景 |
+| effect_explode_4.png | 26K | 是 | 是 | 通过 | 已去除白色背景 |
+| effect_explode_5.png | 10K | 是 | 是 | 通过 | 已去除白色背景 |
+| effect_shield.png | 25K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| enemy.png | 16K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| enemy_beetle.png | 11K | 是 | 是 | 通过 | 已去除白色背景 |
+| enemy_blackhole_interferer.png | 13K | 是 | 是 | 通过 | 已去除白色背景 |
+| enemy_dragonfly.png | 3.9K | 是 | 是 | 通过 | 已去除白色背景 |
+| enemy_drone.png | 1.3K | 是 | 是 | 通过 | 已去除白色背景 |
+| enemy_ghost_shuttle.png | 4.8K | 是 | 是 | 通过 | 已去除白色背景 |
+| enemy_ion_cutter.png | 8.3K | 是 | 是 | 通过 | 已去除白色背景 |
+| enemy_meteor.png | 6.0K | 是 | 是 | 通过 | 已去除白色背景 |
+| enemy_prism_turret.png | 13K | 是 | 是 | 通过 | 已去除白色背景 |
+| enemy_viper.png | 2.2K | 是 | 是 | 通过 | 已去除白色背景 |
+| exp_bar_bg.png | 6.9K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| exp_bar_fill.png | 8.3K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| icon_heart.png | 7.6K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| icon_level.png | 6.8K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| icon_shield.png | 7.5K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| prop_slot.png | 10K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| hero.png | 32K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| player_damaged.png | 10K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| player_eagle.png | 10K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| game_logo.png | 168K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| game_logo_bk.png | 234K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| prop_armor_plate.png | 8.2K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| prop_cross_bullet.png | 8.0K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| prop_deflect_shield.png | 9.3K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| prop_drone_support.png | 6.1K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| prop_energy_core.png | 9.6K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| prop_grenade.png | 8.0K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| prop_laser.png | 4.8K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| prop_missile.png | 3.8K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| prop_pulse_cannon.png | 5.1K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| prop_ring_blast.png | 7.9K | 是 | 是 | 通过 | 校验通过，背景透明 |
+| prop_shotgun.png | 4.6K | 是 | 是 | 通过 | 校验通过，背景透明 |
