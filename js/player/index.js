@@ -4,10 +4,13 @@ import Bullet from './bullet';
 
 // 玩家相关常量设置
 const PLAYER_IMG_SRC = 'images/player_eagle.png';
+const PLAYER_DAMAGED_IMG_SRC = 'images/player_damaged.png';
+const SHIELD_IMG_SRC = 'images/effect_shield.png';
 const PLAYER_WIDTH = 80;
 const PLAYER_HEIGHT = 80;
-const EXPLO_IMG_PREFIX = 'images/explosion';
+const EXPLO_IMG_PREFIX = 'images/effect_explode_';
 const BASE_SHOOT_INTERVAL = 20; // 基础射击间隔
+const DAMAGE_INVINCIBLE_TIME = 2000; // 受伤后无敌时间（毫秒）
 
 export default class Player extends Animation {
   constructor() {
@@ -23,6 +26,18 @@ export default class Player extends Animation {
     this.dodgeRate = 0; // 闪避概率（0-1）
     this.shootSpeedMultiplier = 1; // 射速加成倍数
     this.bulletDamageMultiplier = 1; // 子弹伤害加成倍数
+
+    // 受伤状态相关
+    this.isInvincible = false; // 是否处于无敌状态
+    this.invincibleEndTime = 0; // 无敌结束时间
+    this.normalImg = wx.createImage();
+    this.normalImg.src = PLAYER_IMG_SRC;
+    this.damagedImg = wx.createImage();
+    this.damagedImg.src = PLAYER_DAMAGED_IMG_SRC;
+    // 护盾相关
+    this.shieldImg = wx.createImage();
+    this.shieldImg.src = SHIELD_IMG_SRC;
+    this.shieldSize = 120; // 护盾大小
 
     // 触摸控制相关
     this.touchStartX = 0; // 触摸开始时手指X坐标
@@ -328,7 +343,8 @@ export default class Player extends Animation {
    * @param {Sprite} sp: 其他精灵实例
    */
   isCollideWith(sp) {
-    if (!this.visible || !sp.visible || !this.isActive || !sp.isActive) return false;
+    // 无敌状态下不碰撞
+    if (this.isInvincible || !this.visible || !sp.visible || !this.isActive || !sp.isActive) return false;
 
     // 玩家判定点：中心的小圆形
     const playerCenterX = this.x + this.width / 2;
@@ -344,9 +360,20 @@ export default class Player extends Animation {
     );
   }
 
+  /**
+   * 玩家受伤处理
+   */
+  onHit() {
+    // 受伤后进入无敌状态
+    this.isInvincible = true;
+    this.invincibleEndTime = Date.now() + DAMAGE_INVINCIBLE_TIME;
+    // 切换为受伤图片
+    this.img = this.damagedImg;
+  }
+
   // 预定义爆炸的帧动画
   initExplosionAnimation() {
-    const EXPLO_FRAME_COUNT = 19;
+    const EXPLO_FRAME_COUNT = 5;
     const frames = Array.from(
       { length: EXPLO_FRAME_COUNT },
       (_, i) => `${EXPLO_IMG_PREFIX}${i + 1}.png`
@@ -482,7 +509,7 @@ export default class Player extends Animation {
         const bulletCount = weapon.level >= 5 ? 3 : weapon.level >= 3 ? 2 : 1;
         for (let i = -(bulletCount - 1); i <= bulletCount - 1; i += 2) {
           const bullet = GameGlobal.databus.pool.getItemByClass('bullet', Bullet);
-          bullet.init(centerX + i * 15 - bullet.width / 2, centerY - 10, 10);
+          bullet.init(centerX + i * 15 - 8, centerY - 10, 10, -Math.PI / 2, 'pulse');
           bullet.damage = Math.floor(bullet.damage * this.bulletDamageMultiplier);
           GameGlobal.databus.bullets.push(bullet);
         }
@@ -494,7 +521,7 @@ export default class Player extends Animation {
         for (let i = 0; i < scatterCount; i++) {
           const angle = -spread / 2 + (spread / (scatterCount - 1)) * i - Math.PI / 2;
           const bullet = GameGlobal.databus.pool.getItemByClass('bullet', Bullet);
-          bullet.init(centerX, centerY, 8, angle);
+          bullet.init(centerX, centerY, 8, angle, 'shotgun');
           bullet.damage = Math.floor(bullet.damage * this.bulletDamageMultiplier * 0.8); // 散射伤害稍低
           GameGlobal.databus.bullets.push(bullet);
         }
@@ -505,7 +532,7 @@ export default class Player extends Animation {
         for (let i = 0; i < missileCount; i++) {
           const bullet = GameGlobal.databus.pool.getItemByClass('bullet', Bullet);
           const offsetX = (i - (missileCount - 1) / 2) * 20;
-          bullet.init(centerX + offsetX, centerY, 7, -Math.PI / 2, 'homing');
+          bullet.init(centerX + offsetX, centerY, 7, -Math.PI / 2, 'missile');
           bullet.damage = Math.floor(bullet.damage * this.bulletDamageMultiplier * 1.5); // 导弹伤害更高
           GameGlobal.databus.bullets.push(bullet);
         }
@@ -517,7 +544,7 @@ export default class Player extends Animation {
         for (let i = 0; i < grenadeCount; i++) {
           const angle = -arcSpread / 2 + (arcSpread / (grenadeCount - 1)) * i - Math.PI / 2;
           const bullet = GameGlobal.databus.pool.getItemByClass('bullet', Bullet);
-          bullet.init(centerX, centerY, 8, angle, 'explosive');
+          bullet.init(centerX, centerY, 8, angle, 'grenade');
           bullet.damage = Math.floor(bullet.damage * this.bulletDamageMultiplier * 1.2);
           GameGlobal.databus.bullets.push(bullet);
         }
@@ -530,7 +557,7 @@ export default class Player extends Animation {
           for (let i = 0; i < bulletCount; i++) {
             const angle = (Math.PI * 2 / bulletCount) * i;
             const bullet = GameGlobal.databus.pool.getItemByClass('bullet', Bullet);
-            bullet.init(centerX, centerY, 6 + r * 2, angle);
+            bullet.init(centerX, centerY, 6 + r * 2, angle, 'ring');
             bullet.damage = Math.floor(bullet.damage * this.bulletDamageMultiplier * 0.7);
             GameGlobal.databus.bullets.push(bullet);
           }
@@ -541,7 +568,7 @@ export default class Player extends Animation {
         const laserCount = weapon.level >= 5 ? 3 : weapon.level >= 3 ? 2 : 1;
         for (let i = -(laserCount - 1); i <= laserCount - 1; i += 2) {
           const bullet = GameGlobal.databus.pool.getItemByClass('bullet', Bullet);
-          bullet.init(centerX + i * 20 - bullet.width / 2, centerY, 12, -Math.PI / 2, 'pierce');
+          bullet.init(centerX + i * 20 - 4, centerY, 12, -Math.PI / 2, 'laser');
           bullet.penetration = 999; // 无限穿透
           bullet.damage = Math.floor(bullet.damage * this.bulletDamageMultiplier * 2);
           GameGlobal.databus.bullets.push(bullet);
@@ -554,7 +581,7 @@ export default class Player extends Animation {
         for (let i = -crossCount; i <= crossCount; i++) {
           const bullet = GameGlobal.databus.pool.getItemByClass('bullet', Bullet);
           const angle = Math.atan2(-1, -0.5) + i * 0.1;
-          bullet.init(centerX, centerY, 7, angle);
+          bullet.init(centerX, centerY, 7, angle, 'cross');
           bullet.damage = Math.floor(bullet.damage * this.bulletDamageMultiplier);
           GameGlobal.databus.bullets.push(bullet);
         }
@@ -562,7 +589,7 @@ export default class Player extends Animation {
         for (let i = -crossCount; i <= crossCount; i++) {
           const bullet = GameGlobal.databus.pool.getItemByClass('bullet', Bullet);
           const angle = Math.atan2(-1, 0.5) + i * 0.1;
-          bullet.init(centerX, centerY, 7, angle);
+          bullet.init(centerX, centerY, 7, angle, 'cross');
           bullet.damage = Math.floor(bullet.damage * this.bulletDamageMultiplier);
           GameGlobal.databus.bullets.push(bullet);
         }
@@ -573,7 +600,7 @@ export default class Player extends Animation {
         for (let i = 0; i < droneCount; i++) {
           const offsetX = (i - (droneCount - 1) / 2) * 30;
           const bullet = GameGlobal.databus.pool.getItemByClass('bullet', Bullet);
-          bullet.init(centerX + offsetX, centerY - 20, 7, -Math.PI / 2);
+          bullet.init(centerX + offsetX, centerY - 20, 7, -Math.PI / 2, 'drone');
           bullet.damage = Math.floor(bullet.damage * this.bulletDamageMultiplier * 0.9);
           GameGlobal.databus.bullets.push(bullet);
         }
@@ -581,7 +608,7 @@ export default class Player extends Animation {
 
       default: // 默认单发射击
         const bullet = GameGlobal.databus.pool.getItemByClass('bullet', Bullet);
-        bullet.init(centerX - bullet.width / 2, centerY - 10, 10);
+        bullet.init(centerX - 8, centerY - 10, 10, -Math.PI / 2, 'pulse');
         bullet.damage = Math.floor(bullet.damage * this.bulletDamageMultiplier);
         GameGlobal.databus.bullets.push(bullet);
     }
@@ -599,6 +626,12 @@ export default class Player extends Animation {
   update() {
     const databus = GameGlobal.databus;
 
+    // 处理无敌状态
+    if (this.isInvincible && Date.now() >= this.invincibleEndTime) {
+      this.isInvincible = false;
+      this.img = this.normalImg; // 恢复正常图片
+    }
+
     // 更新引擎喷射动画
     this.thrusterFrameTimer++;
     if (this.thrusterFrameTimer >= this.thrusterFrameInterval) {
@@ -606,25 +639,10 @@ export default class Player extends Animation {
       this.thrusterFrameTimer = 0;
     }
 
-    // 每100帧打印一次状态，避免日志太多
-    if (databus.frame % 100 === 0) {
-      console.log('Player update 状态检查:', {
-        gameState: databus.gameState,
-        isGameOver: databus.isGameOver,
-        isPaused: databus.isPaused,
-        isLevelTransition: databus.isLevelTransition,
-        weaponsLength: this.weapons.length,
-        weapons: this.weapons
-      });
-    }
-
     if (databus.isGameOver || databus.isPaused ||
         databus.gameState === 'selecting_prop' ||
         databus.gameState === 'upgrading' ||
         databus.isLevelTransition) {
-      if (databus.frame % 100 === 0) {
-        console.log('Player update 被状态拦截，不执行射击逻辑');
-      }
       return;
     }
 
@@ -635,31 +653,24 @@ export default class Player extends Animation {
 
       // 冷却计时
       if (weapon.cooldown <= 0) {
-        console.log(`武器${index}(${weapon.type})冷却完成，发射子弹，实际间隔:${actualInterval}`);
         this.shootWeapon(weapon); // 只发射当前冷却好的武器
         weapon.cooldown = actualInterval; // 重置冷却
       } else {
         weapon.cooldown--;
-        // 每20帧打印一次冷却状态
-        if (databus.frame % 20 === 0 && index === 0) {
-          console.log(`武器${index}(${weapon.type})冷却: ${weapon.cooldown}/${actualInterval}`);
-        }
       }
     });
 
     // 如果没有武器，用默认单发射击
     if (this.weapons.length === 0) {
-      console.log('没有武器，使用默认射击');
       if (!this.defaultWeaponCooldown) this.defaultWeaponCooldown = 0;
 
       const actualInterval = Math.max(5, Math.floor(BASE_SHOOT_INTERVAL / this.shootSpeedMultiplier));
       if (this.defaultWeaponCooldown <= 0) {
-        console.log('默认武器冷却完成，发射子弹');
         // 直接创建默认子弹，不调用shoot()避免空循环
         const centerX = this.x + this.width / 2;
         const centerY = this.y;
         const bullet = databus.pool.getItemByClass('bullet', Bullet);
-        bullet.init(centerX - bullet.width / 2, centerY - 10, 10);
+        bullet.init(centerX - 6, centerY - 10, 10, -Math.PI / 2, 'drone');
         bullet.damage = Math.floor(bullet.damage * this.bulletDamageMultiplier);
         databus.bullets.push(bullet);
         GameGlobal.musicManager.playShoot();
@@ -691,8 +702,25 @@ export default class Player extends Animation {
       // ctx.drawImage(this.thrusterFrames[this.currentThrusterFrame], x, y, frame.width, frame.height);
     }
 
-    // 调用父类渲染方法绘制战机
+    // 无敌状态闪烁效果
+    let renderAlpha = 1;
+    if (this.isInvincible && this.isActive && !this.isPlaying) {
+      const now = Date.now();
+      // 每200ms闪烁一次：显示/隐藏交替
+      renderAlpha = Math.floor(now / 200) % 2 === 0 ? 1 : 0.3;
+    }
+
+    // 绘制战机
+    ctx.globalAlpha = renderAlpha;
     super.render(ctx);
+    ctx.globalAlpha = 1;
+
+    // 绘制护盾效果（不受闪烁影响）
+    if (this.shield > 0 && this.isActive && !this.isPlaying) {
+      const x = this.x + this.width / 2 - this.shieldSize / 2;
+      const y = this.y + this.height / 2 - this.shieldSize / 2;
+      ctx.drawImage(this.shieldImg, x, y, this.shieldSize, this.shieldSize);
+    }
   }
 
   destroy() {

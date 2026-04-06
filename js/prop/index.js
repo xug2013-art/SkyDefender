@@ -5,11 +5,49 @@ const PROP_WIDTH = 30;
 const PROP_HEIGHT = 30;
 const PROP_IMG_SRC = 'images/Common.png'; // 暂时用公共图片，后续替换
 
+// 预加载道具图标资源
+const propAssets = {
+  'pulse_cannon': wx.createImage(),
+  'shotgun': wx.createImage(),
+  'homing_missile': wx.createImage(),
+  'arc_grenade': wx.createImage(),
+  'ring_blast': wx.createImage(),
+  'pierce_laser': wx.createImage(),
+  'cross_barrage': wx.createImage(),
+  'drone_support': wx.createImage(),
+  'energy_core': wx.createImage(),
+  'armor_plate': wx.createImage(),
+  'deflect_shield': wx.createImage(),
+  'explosive_warhead': wx.createImage(),
+  'magnetic_field': wx.createImage(),
+  'concentrated_energy': wx.createImage(),
+  'loot_chip': wx.createImage(),
+  'thruster': wx.createImage()
+};
+
+// 设置道具图标路径
+propAssets['pulse_cannon'].src = 'images/prop_pulse_cannon.png';
+propAssets['shotgun'].src = 'images/prop_shotgun.png';
+propAssets['homing_missile'].src = 'images/prop_missile.png';
+propAssets['arc_grenade'].src = 'images/prop_grenade.png';
+propAssets['ring_blast'].src = 'images/prop_ring_blast.png';
+propAssets['pierce_laser'].src = 'images/prop_laser.png';
+propAssets['cross_barrage'].src = 'images/prop_cross_bullet.png';
+propAssets['drone_support'].src = 'images/prop_drone_support.png';
+propAssets['energy_core'].src = 'images/prop_energy_core.png';
+propAssets['armor_plate'].src = 'images/prop_armor_plate.png';
+propAssets['deflect_shield'].src = 'images/prop_deflect_shield.png';
+propAssets['explosive_warhead'].src = 'images/prop_explosive_warhead.png';
+propAssets['magnetic_field'].src = 'images/prop_magnetic_field.png';
+propAssets['concentrated_energy'].src = 'images/prop_energy_battery.png';
+propAssets['loot_chip'].src = 'images/prop_looting_chip.png';
+propAssets['thruster'].src = 'images/prop_thruster.png';
+
 // 道具类型
 export const PROP_TYPE = {
   // 攻击道具
   ATTACK_PULSE_CANNON: 'pulse_cannon',     // 脉冲机炮
-  ATTACK_SCATTER_SHOT: 'scatter_shot',     // 散射霰弹
+  ATTACK_SCATTER_SHOT: 'shotgun',     // 散射霰弹
   ATTACK_HOMING_MISSILE: 'homing_missile', // 追踪导弹
   ATTACK_ARC_GRENADE: 'arc_grenade',       // 弧形榴弹
   ATTACK_RING_BLAST: 'ring_blast',         // 环形爆破
@@ -122,13 +160,14 @@ export default class Prop extends Sprite {
     super(PROP_IMG_SRC, PROP_WIDTH, PROP_HEIGHT, 0, 0, 1, 0, 'neutral');
 
     this.propType = PROP_TYPE.ATTACK_PULSE_CANNON;
-    this.speedY = 1; // 下落速度
+    this.speedY = 1.5; // 下落速度（加快）
     this.speedX = 0; // 水平漂浮速度
     this.switchInterval = 120; // 切换种类间隔（2秒）
     this.lastSwitchFrame = 0;
     this.lifeTime = 0;
-    this.maxLifeTime = 600; // 最大存在时间10秒
+    this.maxLifeTime = 1200; // 最大存在时间20秒
     this.canSwitch = true; // 是否可以切换种类
+    this.shouldDestroyOnBoundary = false; // 是否在触碰边界时销毁
   }
 
   /**
@@ -143,10 +182,14 @@ export default class Prop extends Sprite {
     this.y = y;
     this.propType = propType || this.getRandomPropType();
     this.canSwitch = canSwitch;
-    this.speedY = 0.5 + Math.random() * 0.5;
-    this.speedX = (Math.random() - 0.5) * 1;
+    // 固定速度，方向完全随机
+    const speed = 2; // 固定速度
+    const angle = Math.random() * Math.PI * 2; // 0-360度随机角度
+    this.speedX = Math.cos(angle) * speed;
+    this.speedY = Math.sin(angle) * speed;
     this.lastSwitchFrame = GameGlobal.databus.frame;
     this.lifeTime = 0;
+    this.shouldDestroyOnBoundary = false;
 
     this.isActive = true;
     this.visible = true;
@@ -156,7 +199,7 @@ export default class Prop extends Sprite {
    * 获取随机道具类型
    */
   getRandomPropType() {
-    const propTypes = Object.values(PROP_TYPE);
+    const propTypes = Object.values(PROP_TYPE).filter(type => !type.startsWith('synth_'));
     return propTypes[Math.floor(Math.random() * propTypes.length)];
   }
 
@@ -170,13 +213,35 @@ export default class Prop extends Sprite {
 
     this.lifeTime++;
 
+    // 检查是否超过20秒，超过后触碰边界就销毁
+    if (this.lifeTime >= this.maxLifeTime) {
+      this.shouldDestroyOnBoundary = true;
+    }
+
     // 漂浮移动
     this.y += this.speedY;
     this.x += this.speedX;
 
-    // 左右边界反弹
+    // 左右边界处理
     if (this.x <= 0 || this.x >= SCREEN_WIDTH - this.width) {
+      if (this.shouldDestroyOnBoundary) {
+        this.destroy();
+        return;
+      }
       this.speedX *= -1;
+      // 限制在边界内
+      this.x = Math.max(0, Math.min(SCREEN_WIDTH - this.width, this.x));
+    }
+
+    // 上下边界反弹
+    if (this.y <= 0 || this.y >= SCREEN_HEIGHT - this.height) {
+      if (this.shouldDestroyOnBoundary) {
+        this.destroy();
+        return;
+      }
+      this.speedY *= -1;
+      // 限制在边界内
+      this.y = Math.max(0, Math.min(SCREEN_HEIGHT - this.height, this.y));
     }
 
     // 随机切换道具类型
@@ -269,5 +334,23 @@ export default class Prop extends Sprite {
     this.isActive = false;
     this.visible = false;
     GameGlobal.databus.removeProp(this);
+  }
+
+  /**
+   * 渲染道具，根据propType显示对应的道具图片
+   */
+  render(ctx) {
+    if (!this.visible) return;
+
+    const propImg = propAssets[this.propType];
+    if (propImg && propImg.complete && propImg.naturalWidth > 0) {
+      // 显示对应的道具图片
+      ctx.drawImage(propImg, this.x, this.y, this.width, this.height);
+    } else {
+      // 后备方案：显示默认图片
+      if (this.img && this.img.complete && this.img.naturalWidth > 0) {
+        ctx.drawImage(this.img, this.x, this.y, this.width, this.height);
+      }
+    }
   }
 }

@@ -42,7 +42,8 @@ export const ENEMY_CONFIG = {
     shootInterval: 60,
     bulletType: 'straight',
     score: 100,
-    exp: 2
+    exp: 2,
+    imgSrc: 'images/enemy_dragonfly.png'
   },
   [ENEMY_TYPES.BEETLE]: {
     hp: 20,
@@ -54,7 +55,8 @@ export const ENEMY_CONFIG = {
     shootInterval: 90,
     bulletType: 'sector',
     score: 200,
-    exp: 4
+    exp: 4,
+    imgSrc: 'images/enemy_beetle.png'
   },
   [ENEMY_TYPES.VIPER]: {
     hp: 10,
@@ -66,7 +68,8 @@ export const ENEMY_CONFIG = {
     shootInterval: 80,
     bulletType: 'homing',
     score: 150,
-    exp: 2
+    exp: 2,
+    imgSrc: 'images/enemy_viper.png'
   },
   [ENEMY_TYPES.METEOR]: {
     hp: 25,
@@ -78,7 +81,8 @@ export const ENEMY_CONFIG = {
     shootInterval: 70,
     bulletType: 'arc',
     score: 250,
-    exp: 4
+    exp: 4,
+    imgSrc: 'images/enemy_meteor.png'
   },
   [ENEMY_TYPES.PRISM]: {
     hp: 40,
@@ -90,7 +94,8 @@ export const ENEMY_CONFIG = {
     shootInterval: 120,
     bulletType: 'laser_sector',
     score: 400,
-    exp: 8
+    exp: 8,
+    imgSrc: 'images/enemy_prism_turret.png'
   },
   [ENEMY_TYPES.GHOST]: {
     hp: 15,
@@ -102,7 +107,8 @@ export const ENEMY_CONFIG = {
     shootInterval: 100,
     bulletType: 'burst_sector',
     score: 300,
-    exp: 4
+    exp: 4,
+    imgSrc: 'images/enemy_ghost_shuttle.png'
   },
   [ENEMY_TYPES.DRONE]: {
     hp: 5,
@@ -114,7 +120,8 @@ export const ENEMY_CONFIG = {
     shootInterval: 50,
     bulletType: 'straight',
     score: 50,
-    exp: 2
+    exp: 2,
+    imgSrc: 'images/enemy_drone.png'
   },
   [ENEMY_TYPES.ION]: {
     hp: 50,
@@ -126,7 +133,8 @@ export const ENEMY_CONFIG = {
     shootInterval: 100,
     bulletType: 'mixed',
     score: 500,
-    exp: 8
+    exp: 8,
+    imgSrc: 'images/enemy_ion_cutter.png'
   },
   [ENEMY_TYPES.BLACKHOLE]: {
     hp: 45,
@@ -138,7 +146,8 @@ export const ENEMY_CONFIG = {
     shootInterval: 150,
     bulletType: 'ring',
     score: 450,
-    exp: 8
+    exp: 8,
+    imgSrc: 'images/enemy_blackhole_interferer.png'
   }
 };
 
@@ -308,22 +317,23 @@ export const LEVEL_CONFIG = [
   {
     level: 1,
     name: '城市上空',
-    wavesPerLevel: 8,
+    wavesPerLevel: 9, // 增加1波道中Boss
     waves: [
       { id: 1, enemies: [{ type: ENEMY_TYPES.DRAGONFLY, count: 3 }], interval: 200 },
       { id: 2, enemies: [{ type: ENEMY_TYPES.DRAGONFLY, count: 5 }], interval: 200 },
       { id: 3, enemies: [{ type: ENEMY_TYPES.BEETLE, count: 2 }], interval: 250 },
       { id: 4, enemies: [{ type: ENEMY_TYPES.DRAGONFLY, count: 3 }, { type: ENEMY_TYPES.BEETLE, count: 2 }], interval: 250 },
-      // 第4波后生成道中精英
+      // 第4波后生成道中Boss（用第二关精英怪作为首关道中Boss）
       { id: 5, elite: ELITE_CONFIG.GHOST_ELITE, interval: 300 },
+      // 道中Boss后继续小怪波
       { id: 6, enemies: [{ type: ENEMY_TYPES.VIPER, count: 3 }], interval: 220 },
       { id: 7, enemies: [{ type: ENEMY_TYPES.BEETLE, count: 3 }, { type: ENEMY_TYPES.VIPER, count: 2 }], interval: 250 },
       { id: 8, enemies: [{ type: ENEMY_TYPES.DRAGONFLY, count: 4 }, { type: ENEMY_TYPES.BEETLE, count: 2 }, { type: ENEMY_TYPES.VIPER, count: 2 }], interval: 280 },
       { id: 9, enemies: [{ type: ENEMY_TYPES.DRAGONFLY, count: 3 }, { type: ENEMY_TYPES.BEETLE, count: 3 }, { type: ENEMY_TYPES.VIPER, count: 3 }], interval: 300 },
-      // 第8波后生成关底Boss
+      // 第9波后生成关底Boss
       { id: 10, boss: BOSS_TYPES.INTERCEPTOR }
     ],
-    background: 'images/bg_city.png'
+    background: 'images/bg_level1_city.png' // 对齐background.js的路径
   },
   // 第二关：大气层边缘
   {
@@ -346,7 +356,7 @@ export const LEVEL_CONFIG = [
       // 第10波后生成关底Boss
       { id: 12, boss: BOSS_TYPES.ORBITAL_GUARD }
     ],
-    background: 'images/bg_atmosphere.png'
+    background: 'images/bg_level2_atmosphere.png' // 对齐background.js的路径
   },
   // 第三关：太空轨道
   {
@@ -371,7 +381,7 @@ export const LEVEL_CONFIG = [
       // 第12波后生成关底Boss
       { id: 14, boss: BOSS_TYPES.MOTHERSHIP_CORE }
     ],
-    background: 'images/bg_space.png'
+    background: 'images/bg_level3_space.png' // 对齐background.js的路径
   }
 ];
 

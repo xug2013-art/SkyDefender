@@ -41,6 +41,35 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 2. 导入项目根目录，选择"小游戏"项目类型
 3. 工具内直接预览和调试，支持真机预览
 
+### 微信开发者工具CLI调试
+> 底层逻辑：通过CLI命令实现自动化调试、预览、发布流程，对齐DevOps流水线要求
+- **CLI路径**（Windows默认）：`C:\Program Files (x86)\Tencent\微信web开发者工具\cli.bat`
+- **开启自动化模式**（端口9420，MCP适配默认端口）：
+```bash
+"C:\Program Files (x86)\Tencent\微信web开发者工具\cli.bat" auto --project "d:\workspace\SkyDefender" --port 9420
+```
+- **打开项目**：
+```bash
+"C:\Program Files (x86)\Tencent\微信web开发者工具\cli.bat" open --project "d:\workspace\SkyDefender" --port 9420
+```
+- **预览项目**：
+```bash
+"C:\Program Files (x86)\Tencent\微信web开发者工具\cli.bat" preview --project "d:\workspace\SkyDefender" --port 9420
+```
+- **上传发布**：
+```bash
+"C:\Program Files (x86)\Tencent\微信web开发者工具\cli.bat" upload --project "d:\workspace\SkyDefender" --port 9420 --ver 1.0.0 --desc "版本发布说明"
+```
+- **关闭IDE**：
+```bash
+"C:\Program Files (x86)\Tencent\微信web开发者工具\cli.bat" quit --port 9420
+```
+
+### 自动化调试配置
+- 默认自动化端口：9420
+- 项目AppID：wx02b9dbd56e2a4249
+- 支持MCP工具链调用，实现自动化测试、性能分析等能力
+
 ### 代码检查
 ```bash
 eslint js/**/*.js

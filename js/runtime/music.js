@@ -34,4 +34,14 @@ export default class Music {
     // TODO: 实现Boss出场音效
     console.log('Boss出场音效（暂未实现）');
   }
+
+  playPhaseChange() {
+    // TODO: 实现Boss阶段切换音效
+    console.log('Boss阶段切换音效（暂未实现）');
+  }
+
+  playBossExplosion() {
+    // TODO: 实现Boss爆炸音效
+    console.log('Boss爆炸音效（暂未实现）');
+  }
 }

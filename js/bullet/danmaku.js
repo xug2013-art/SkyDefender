@@ -1,9 +1,32 @@
 import Sprite from '../base/sprite';
 import { SCREEN_WIDTH, SCREEN_HEIGHT } from '../render';
 
-const DANMAKU_IMG_SRC = 'images/bullet_enemy_normal.png';
-const DANMAKU_WIDTH = 8;
-const DANMAKU_HEIGHT = 8;
+// 弹幕类型配置
+const DANMAKU_CONFIG = {
+  'straight': {
+    src: 'images/bullet_enemy_normal.png',
+    width: 8,
+    height: 8
+  },
+  'curve': {
+    src: 'images/bullet_enemy_curve.png',
+    width: 8,
+    height: 8
+  },
+  'spiral': {
+    src: 'images/bullet_enemy_spiral.png',
+    width: 8,
+    height: 8
+  },
+  'homing': {
+    src: 'images/bullet_enemy_tracking.png',
+    width: 16,
+    height: 16
+  }
+};
+
+// 默认弹幕配置
+const DEFAULT_DANMAKU = DANMAKU_CONFIG.straight;
 
 /**
  * 敌方弹幕类
@@ -12,7 +35,7 @@ const DANMAKU_HEIGHT = 8;
 export default class Danmaku extends Sprite {
   constructor() {
     // 敌方弹幕，默认伤害1，阵营enemy
-    super(DANMAKU_IMG_SRC, DANMAKU_WIDTH, DANMAKU_HEIGHT, 0, 0, 0, 1, 'enemy');
+    super(DEFAULT_DANMAKU.src, DEFAULT_DANMAKU.width, DEFAULT_DANMAKU.height, 0, 0, 0, 1, 'enemy');
 
     this.speed = 3; // 飞行速度
     this.angle = 0; // 飞行角度（弧度）
@@ -42,10 +65,14 @@ export default class Danmaku extends Sprite {
     this.angularVelocity = options.angularVelocity || 0;
     this.acceleration = options.acceleration || 0;
     this.trackTarget = options.trackTarget || null;
-    this.width = options.width || DANMAKU_WIDTH;
-    this.height = options.height || DANMAKU_HEIGHT;
     this.damage = options.damage || 1;
     this.lifeTime = 0;
+
+    // 根据弹幕类型更新配置
+    const config = DANMAKU_CONFIG[danmakuType] || DEFAULT_DANMAKU;
+    this.img.src = config.src;
+    this.width = options.width || config.width;
+    this.height = options.height || config.height;
 
     this.isActive = true;
     this.visible = true;

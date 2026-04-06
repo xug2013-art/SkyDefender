@@ -37,9 +37,24 @@ export default class Sprite extends Emitter {
   render(ctx) {
     if (!this.visible) return;
 
-    // 只绘制已经加载完成的图片
     if (this.img && this.img.complete && this.img.naturalWidth > 0) {
+      // 图片已加载完成，正常绘制
       ctx.drawImage(this.img, this.x, this.y, this.width, this.height);
+    } else {
+      // 图片未加载完成，绘制占位框（至少让玩家看到有东西）
+      ctx.fillStyle = this.isBoss ? '#ff4444' : '#666666';
+      ctx.fillRect(this.x, this.y, this.width, this.height);
+      // 画个边框
+      ctx.strokeStyle = this.isBoss ? '#ffff00' : '#999999';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(this.x, this.y, this.width, this.height);
+      // 如果是Boss，显示文字
+      if (this.isBoss && this.name) {
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(this.name, this.x + this.width / 2, this.y + this.height / 2);
+      }
     }
   }
 

@@ -5,13 +5,12 @@ import Prop from '../prop/index';
 import { BOSS_CONFIG, BOSS_TYPES } from '../config/level';
 
 const BOSS_IMG_SRC = 'images/boss.png';
-const BOSS_EXPLO_PREFIX = 'images/boss_explosion';
+const BOSS_EXPLO_PREFIX = 'images/explosion';
 
 export default class Boss extends Enemy {
   constructor() {
     super();
 
-    this.img.src = BOSS_IMG_SRC;
     this.bossType = ''; // Boss类型
     this.phaseCount = 1; // 总阶段数
     this.currentPhase = 1; // 当前阶段
@@ -34,7 +33,36 @@ export default class Boss extends Enemy {
       return;
     }
 
+    // 根据Boss类型设置对应的图片
+    const bossImageMap = {
+      [BOSS_TYPES.INTERCEPTOR]: 'images/boss_interceptor_1.png',
+      [BOSS_TYPES.INTERCEPTOR_REMNANT]: 'images/boss_interceptor_1_damaged.png',
+      [BOSS_TYPES.ORBITAL_GUARD]: 'images/boss_orbital_guardian.png',
+      [BOSS_TYPES.ORBITAL_GUARD_REMNANT]: 'images/boss_orbital_guardian_damaged.png',
+      [BOSS_TYPES.MOTHERSHIP_CORE]: 'images/boss_mothership_core.png'
+    };
+    if (bossImageMap[bossType]) {
+      // 重新创建Image对象，避免对象池复用导致的加载状态问题
+      this.img = wx.createImage();
+      const imageSrc = bossImageMap[bossType];
+
+      // 图片加载成功回调
+      this.img.onload = () => {
+        console.log(`Boss图片加载成功: ${imageSrc}, size=${this.img.naturalWidth}x${this.img.naturalHeight}`);
+      };
+
+      // 图片加载失败回调
+      this.img.onerror = (err) => {
+        console.error(`Boss图片加载失败: ${imageSrc}`, err);
+      };
+
+      // 设置图片源，触发加载
+      this.img.src = imageSrc;
+      console.log(`开始加载Boss图片: ${imageSrc}`);
+    }
+
     // 基础属性
+    this.name = config.name;
     this.hp = config.hp;
     this.maxHp = config.maxHp;
     this.damage = config.damage;
@@ -77,7 +105,7 @@ export default class Boss extends Enemy {
 
   // Boss专属爆炸动画
   initBossExplosionAnimation() {
-    const EXPLO_FRAME_COUNT = 24;
+    const EXPLO_FRAME_COUNT = 19;
     const frames = Array.from(
       { length: EXPLO_FRAME_COUNT },
       (_, i) => `${BOSS_EXPLO_PREFIX}${i + 1}.png`
@@ -87,17 +115,32 @@ export default class Boss extends Enemy {
 
   // 更新逻辑
   update() {
+    // 每120帧打印一次更新状态
+    if (GameGlobal.databus.frame % 120 === 0) {
+      console.log(`Boss update被调用: isActive=${this.isActive}, visible=${this.visible}, isEntering=${this.isEntering}, x=${this.x?.toFixed(1)}, y=${this.y?.toFixed(1)}`);
+    }
+
     if (GameGlobal.databus.isGameOver || GameGlobal.databus.isPaused || !this.isActive) {
+      if (GameGlobal.databus.frame % 120 === 0) {
+        console.log(`Boss update被跳过: isGameOver=${GameGlobal.databus.isGameOver}, isPaused=${GameGlobal.databus.isPaused}, isActive=${this.isActive}`);
+      }
       return;
     }
 
     // 入场动画
     if (this.isEntering) {
-      this.y += this.speed * 0.8;
+      this.y += this.speed * 1.5; // 加快入场速度，避免用户以为没生成
+
+      // 入场调试信息（每30帧打印一次）
+      if (GameGlobal.databus.frame % 30 === 0) {
+        console.log(`Boss入场中: y=${this.y.toFixed(2)}, 目标Y=${this.targetY}, 速度=${this.speed * 1.5}`);
+      }
+
       if (this.y >= this.targetY) {
         this.isEntering = false;
         this.phaseStartTime = GameGlobal.databus.frame;
         this.spawnTime = GameGlobal.databus.frame; // 记录生成时间
+        console.log(`Boss入场完成，位置: x=${this.x.toFixed(2)}, y=${this.y.toFixed(2)}`);
       }
       return;
     }
@@ -559,7 +602,7 @@ export default class Boss extends Enemy {
     GameGlobal.databus.boss = null;
 
     // 播放爆炸动画
-    this.playAnimation(24); // 24帧爆炸动画
+    this.playAnimation(19); // 19帧爆炸动画
     GameGlobal.musicManager.playBossExplosion();
     wx.vibrateShort({ type: 'heavy' });
 

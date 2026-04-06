@@ -1,6 +1,10 @@
 import Emitter from '../libs/tinyemitter';
 import { SCREEN_WIDTH, SCREEN_HEIGHT } from '../render';
 
+// ========== 新增：调试模块桥接（顶层import，永远存在）==========
+import { DebugBridge } from '../debug-bridge.js';
+// ============================================================
+
 const atlas = wx.createImage();
 atlas.src = 'images/Common.png';
 
@@ -29,7 +33,22 @@ const uiAssets = {
   propDroneSupport: wx.createImage(),
   propEnergyCore: wx.createImage(),
   propArmorPlate: wx.createImage(),
-  propDeflectShield: wx.createImage()
+  propDeflectShield: wx.createImage(),
+  // 新增辅助道具
+  propExplosiveWarhead: wx.createImage(),
+  propMagneticField: wx.createImage(),
+  propEnergyBattery: wx.createImage(),
+  propLootingChip: wx.createImage(),
+  propThruster: wx.createImage(),
+  // 合成道具
+  propSynthRapidCannon: wx.createImage(),
+  propSynthFortressShotgun: wx.createImage(),
+  propSynthSmartDefense: wx.createImage(),
+  propSynthAnnihilationLauncher: wx.createImage(),
+  propSynthGravityRing: wx.createImage(),
+  propSynthGalaxyLaser: wx.createImage(),
+  propSynthGlobalLooting: wx.createImage(),
+  propSynthStormDrones: wx.createImage()
 };
 
 uiAssets.launchBg.src = 'images/launch_bg.png';
@@ -56,10 +75,29 @@ uiAssets.propDroneSupport.src = 'images/prop_drone_support.png';
 uiAssets.propEnergyCore.src = 'images/prop_energy_core.png';
 uiAssets.propArmorPlate.src = 'images/prop_armor_plate.png';
 uiAssets.propDeflectShield.src = 'images/prop_deflect_shield.png';
+// 新增辅助道具图标
+uiAssets.propExplosiveWarhead.src = 'images/prop_explosive_warhead.png';
+uiAssets.propMagneticField.src = 'images/prop_magnetic_field.png';
+uiAssets.propEnergyBattery.src = 'images/prop_energy_battery.png';
+uiAssets.propLootingChip.src = 'images/prop_looting_chip.png';
+uiAssets.propThruster.src = 'images/prop_thruster.png';
+// 合成道具图标
+uiAssets.propSynthRapidCannon.src = 'images/prop_synth_rapid_cannon.png';
+uiAssets.propSynthFortressShotgun.src = 'images/prop_synth_fortress_shotgun.png';
+uiAssets.propSynthSmartDefense.src = 'images/prop_synth_smart_defense.png';
+uiAssets.propSynthAnnihilationLauncher.src = 'images/prop_synth_annihilation_launcher.png';
+uiAssets.propSynthGravityRing.src = 'images/prop_synth_gravity_ring.png';
+uiAssets.propSynthGalaxyLaser.src = 'images/prop_synth_galaxy_laser.png';
+uiAssets.propSynthGlobalLooting.src = 'images/prop_synth_global_looting.png';
+uiAssets.propSynthStormDrones.src = 'images/prop_synth_storm_drones.png';
 
 export default class GameInfo extends Emitter {
   constructor() {
     super();
+
+    // ========== 新增：初始化调试桥接 ==========
+    DebugBridge.init();
+    // =======================================
 
     this.btnArea = {
       startX: SCREEN_WIDTH / 2 - 40,
@@ -81,14 +119,97 @@ export default class GameInfo extends Emitter {
       isRunning: false,
       startTime: 0,
       duration: 2000, // 动画持续2秒
+      flashDuration: 1000, // 抽中后闪烁持续1秒
       currentIndex: 0,
       allProps: [],
       finalProp: null,
-      callback: null
+      callback: null,
+      isFlashing: false, // 是否处于闪烁阶段
+      flashStartTime: 0, // 闪烁开始时间
+      lastSwitch: 0 // 上次切换道具的时间
+    };
+
+    // 升级道具二级选择状态
+    this.upgradeSelectState = {
+      isActive: false,
+      upgradableProps: [] // 可升级的道具列表
     };
 
     // 绑定触摸事件
     wx.onTouchStart(this.touchEventHandler.bind(this))
+  }
+
+  /**
+   * UI状态更新，处理动画逻辑
+   */
+  update() {
+    const databus = GameGlobal.databus;
+    const lottery = this.lotteryState;
+
+    // 处理抽奖动画状态更新
+    if (lottery.isRunning) {
+      const now = Date.now();
+
+      // 防止空数组导致的错误
+      if (lottery.allProps.length === 0) {
+        this.endLottery();
+        return;
+      }
+
+      const totalDuration = lottery.duration + lottery.flashDuration;
+      const elapsed = now - lottery.startTime;
+
+      // 整个动画结束
+      if (elapsed >= totalDuration) {
+        this.endLottery();
+        return;
+      }
+
+      if (!lottery.isFlashing) {
+        // 抽奖滚动阶段
+        if (elapsed >= lottery.duration) {
+          // 进入闪烁阶段
+          lottery.isFlashing = true;
+          lottery.flashStartTime = now;
+          lottery.currentIndex = lottery.allProps.indexOf(lottery.finalProp);
+          return;
+        }
+
+        // 根据时间计算当前应该显示的道具索引，完全不依赖状态记录，避免累计误差
+        const progress = elapsed / lottery.duration;
+        // 高速滚动，2秒内200步，每10ms切换一次，保证能看到滚动效果
+        const steps = Math.floor(progress * 200);
+        lottery.currentIndex = steps % lottery.allProps.length;
+      }
+    }
+  }
+
+  /**
+   * 结束抽奖动画
+   */
+  endLottery() {
+    const databus = GameGlobal.databus;
+    const lottery = this.lotteryState;
+
+    // 执行回调，添加最终道具
+    if (lottery.callback) {
+      lottery.callback(lottery.finalProp);
+    }
+    // 重置所有抽奖状态，彻底关闭界面
+    this.lotteryState = {
+      isRunning: false,
+      startTime: 0,
+      duration: 2000,
+      flashDuration: 1000,
+      currentIndex: 0,
+      allProps: [],
+      finalProp: null,
+      callback: null,
+      isFlashing: false,
+      flashStartTime: 0,
+      lastSwitch: 0
+    };
+    databus.showUpgradeUI = false;
   }
 
   setFont(ctx) {
@@ -97,6 +218,12 @@ export default class GameInfo extends Emitter {
   }
 
   render(ctx) {
+    // ========== 新增：调试菜单渲染 ==========
+    if (DebugBridge.renderIfActive(ctx)) {
+      return; // 调试菜单激活时不渲染其他
+    }
+    // =======================================
+
     const databus = GameGlobal.databus;
 
     // 游戏开始界面
@@ -208,20 +335,20 @@ export default class GameInfo extends Emitter {
       'energy_core': uiAssets.propEnergyCore,
       'armor_plate': uiAssets.propArmorPlate,
       'deflect_shield': uiAssets.propDeflectShield,
-      'explosive_warhead': uiAssets.propGrenade,
-      'magnetic_field': uiAssets.propRingBlast,
-      'concentrated_energy': uiAssets.propEnergyCore,
-      'loot_chip': uiAssets.propCrossBullet,
-      'thruster': uiAssets.propDroneSupport,
+      'explosive_warhead': uiAssets.propExplosiveWarhead,
+      'magnetic_field': uiAssets.propMagneticField,
+      'concentrated_energy': uiAssets.propEnergyBattery,
+      'loot_chip': uiAssets.propLootingChip,
+      'thruster': uiAssets.propThruster,
       // 合成道具
-      'synth_gatling': uiAssets.propPulseCannon,
-      'synth_rain': uiAssets.propShotgun,
-      'synth_swarm': uiAssets.propMissile,
-      'synth_plasma': uiAssets.propGrenade,
-      'synth_blackhole': uiAssets.propRingBlast,
-      'synth_particle': uiAssets.propLaser,
-      'synth_omni': uiAssets.propCrossBullet,
-      'synth_war_machine': uiAssets.propDroneSupport
+      'synth_gatling': uiAssets.propSynthRapidCannon,
+      'synth_rain': uiAssets.propSynthFortressShotgun,
+      'synth_swarm': uiAssets.propSynthSmartDefense,
+      'synth_plasma': uiAssets.propSynthAnnihilationLauncher,
+      'synth_blackhole': uiAssets.propSynthGravityRing,
+      'synth_particle': uiAssets.propSynthGalaxyLaser,
+      'synth_omni': uiAssets.propSynthGlobalLooting,
+      'synth_war_machine': uiAssets.propSynthStormDrones
     };
 
     // 合成道具名称映射
@@ -393,7 +520,7 @@ export default class GameInfo extends Emitter {
     ctx.fillStyle = '#ffffff';
     ctx.font = '16px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText(`${databus.boss.bossConfig?.name || 'BOSS'} 阶段 ${databus.bossPhase}/${databus.bossTotalPhases}`,
+    ctx.fillText(`${databus.boss.name || 'BOSS'} 阶段 ${databus.bossPhase}/${databus.bossTotalPhases}`,
       SCREEN_WIDTH / 2, y - 10);
     ctx.textAlign = 'left';
   }
@@ -599,7 +726,24 @@ export default class GameInfo extends Emitter {
    */
   renderUpgradeSelection(ctx) {
     const databus = GameGlobal.databus;
-    const options = databus.currentUpgradeOptions || [];
+    const propNames = {
+      'pulse_cannon': '脉冲机炮',
+      'shotgun': '散射霰弹',
+      'homing_missile': '追踪导弹',
+      'arc_grenade': '弧形榴弹',
+      'ring_blast': '环形爆破',
+      'pierce_laser': '穿刺光束',
+      'cross_barrage': '交叉弹幕',
+      'drone_support': '无人机支援',
+      'energy_core': '能量核心',
+      'armor_plate': '装甲片',
+      'deflect_shield': '偏转护盾',
+      'explosive_warhead': '爆炸弹头',
+      'magnetic_field': '磁力场',
+      'concentrated_energy': '浓缩能源',
+      'loot_chip': '掠夺芯片',
+      'thruster': '推进器'
+    };
 
     ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
     ctx.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -607,36 +751,69 @@ export default class GameInfo extends Emitter {
     ctx.fillStyle = '#ffffff';
     ctx.font = '28px Arial';
     ctx.textAlign = 'center';
-    ctx.fillText('选择升级', SCREEN_WIDTH / 2, 150);
 
-    // 4个升级选项
-    const btnWidth = 300;
-    const btnHeight = 80;
-    const padding = 20;
-    const startY = 220;
+    // 二级选择：选择要升级的道具
+    if (this.upgradeSelectState.isActive) {
+      ctx.fillText('选择要升级的道具', SCREEN_WIDTH / 2, 150);
+      const props = this.upgradeSelectState.upgradableProps;
 
-    for (let i = 0; i < options.length; i++) {
-      const y = startY + i * (btnHeight + padding);
-      const x = (SCREEN_WIDTH - btnWidth) / 2;
+      const btnWidth = 300;
+      const btnHeight = 80;
+      const padding = 20;
+      const startY = 220;
 
-      // 按钮背景
-      ctx.drawImage(uiAssets.btnNormal, x, y, btnWidth, btnHeight);
+      for (let i = 0; i < props.length; i++) {
+        const y = startY + i * (btnHeight + padding);
+        const x = (SCREEN_WIDTH - btnWidth) / 2;
 
-      // 升级名称
+        // 按钮背景
+        ctx.drawImage(uiAssets.btnNormal, x, y, btnWidth, btnHeight);
+
+        // 道具名称和等级
+        const prop = props[i];
+        const name = propNames[prop.type] || prop.type;
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '20px Arial';
+        ctx.fillText(`${name} (Lv${prop.level} → Lv${prop.level + 1})`, x + btnWidth / 2, y + btnHeight / 2 + 7);
+      }
+
+      // 返回按钮
+      const backY = startY + props.length * (btnHeight + padding) + 20;
+      const backX = (SCREEN_WIDTH - btnWidth) / 2;
+      ctx.drawImage(uiAssets.btnNormal, backX, backY, btnWidth, btnHeight);
       ctx.fillStyle = '#ffffff';
-      ctx.font = '20px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText(options[i].name, x + btnWidth / 2, y + btnHeight / 2 + 7);
+      ctx.fillText('返回', backX + btnWidth / 2, backY + btnHeight / 2 + 7);
+    } else {
+      // 一级选择界面
+      ctx.fillText('选择升级', SCREEN_WIDTH / 2, 150);
+      const options = databus.currentUpgradeOptions || [];
+
+      const btnWidth = 300;
+      const btnHeight = 80;
+      const padding = 20;
+      const startY = 220;
+
+      for (let i = 0; i < options.length; i++) {
+        const y = startY + i * (btnHeight + padding);
+        const x = (SCREEN_WIDTH - btnWidth) / 2;
+
+        // 按钮背景
+        ctx.drawImage(uiAssets.btnNormal, x, y, btnWidth, btnHeight);
+
+        // 升级名称
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '20px Arial';
+        ctx.fillText(options[i].name, x + btnWidth / 2, y + btnHeight / 2 + 7);
+      }
     }
 
     ctx.textAlign = 'left';
   }
 
   /**
-   * 渲染随机道具抽奖动画
+   * 渲染随机道具抽奖动画（纯渲染，不修改状态）
    */
   renderLotteryAnimation(ctx) {
-    const databus = GameGlobal.databus;
     const lottery = this.lotteryState;
     const now = Date.now();
 
@@ -655,18 +832,6 @@ export default class GameInfo extends Emitter {
     const x = SCREEN_WIDTH / 2;
     const y = SCREEN_HEIGHT / 2;
 
-    // 计算当前显示的道具
-    const elapsed = now - lottery.startTime;
-    const progress = Math.min(elapsed / lottery.duration, 1);
-    // 动画速度逐渐变慢
-    const speed = Math.max(50, 300 * (1 - progress));
-    if (!lottery.lastSwitch || elapsed - lottery.lastSwitch > speed) {
-      lottery.currentIndex = (lottery.currentIndex + 1) % lottery.allProps.length;
-      lottery.lastSwitch = elapsed;
-    }
-
-    // 显示当前道具
-    const currentProp = lottery.allProps[lottery.currentIndex];
     const propImages = {
       'pulse_cannon': uiAssets.propPulseCannon,
       'shotgun': uiAssets.propShotgun,
@@ -679,11 +844,11 @@ export default class GameInfo extends Emitter {
       'energy_core': uiAssets.propEnergyCore,
       'armor_plate': uiAssets.propArmorPlate,
       'deflect_shield': uiAssets.propDeflectShield,
-      'explosive_warhead': uiAssets.propGrenade,
-      'magnetic_field': uiAssets.propRingBlast,
-      'concentrated_energy': uiAssets.propEnergyCore,
-      'loot_chip': uiAssets.propCrossBullet,
-      'thruster': uiAssets.propDroneSupport
+      'explosive_warhead': uiAssets.propExplosiveWarhead,
+      'magnetic_field': uiAssets.propMagneticField,
+      'concentrated_energy': uiAssets.propEnergyBattery,
+      'loot_chip': uiAssets.propLootingChip,
+      'thruster': uiAssets.propThruster
     };
     const propNames = {
       'pulse_cannon': '脉冲机炮',
@@ -704,26 +869,43 @@ export default class GameInfo extends Emitter {
       'thruster': '推进器'
     };
 
-    const propImg = propImages[currentProp];
-    if (propImg) {
-      ctx.drawImage(propImg, x - iconSize / 2, y - iconSize / 2, iconSize, iconSize);
+    if (!lottery.isFlashing) {
+      // 抽奖滚动阶段 - 直接使用update阶段计算好的currentIndex
+      const currentProp = lottery.allProps[lottery.currentIndex];
+      const propImg = propImages[currentProp];
+      if (propImg) {
+        ctx.drawImage(propImg, x - iconSize / 2, y - iconSize / 2, iconSize, iconSize);
+      } else {
+        ctx.fillStyle = '#1e90ff';
+        ctx.fillRect(x - iconSize / 2, y - iconSize / 2, iconSize, iconSize);
+      }
+
+      // 道具名称
+      ctx.fillStyle = '#ffff00';
+      ctx.font = '24px Arial';
+      ctx.fillText(propNames[currentProp] || currentProp, x, y + iconSize / 2 + 40);
     } else {
-      ctx.fillStyle = '#1e90ff';
-      ctx.fillRect(x - iconSize / 2, y - iconSize / 2, iconSize, iconSize);
-    }
+      // 闪烁阶段，显示最终道具
+      const flashElapsed = now - lottery.flashStartTime;
+      const flashProgress = Math.min(flashElapsed / lottery.flashDuration, 1);
 
-    // 道具名称
-    ctx.fillStyle = '#ffff00';
-    ctx.font = '24px Arial';
-    ctx.fillText(propNames[currentProp] || currentProp, x, y + iconSize / 2 + 40);
+      // 闪烁效果：每200毫秒切换一次可见性
+      const visible = Math.floor(flashElapsed / 200) % 2 === 0 || flashProgress >= 1;
 
-    // 动画结束
-    if (progress >= 1) {
-      lottery.isRunning = false;
-      databus.showUpgradeUI = false;
-      // 执行回调，添加最终道具
-      if (lottery.callback) {
-        lottery.callback(lottery.finalProp);
+      if (visible) {
+        const finalProp = lottery.finalProp;
+        const propImg = propImages[finalProp];
+        if (propImg) {
+          ctx.drawImage(propImg, x - iconSize / 2, y - iconSize / 2, iconSize, iconSize);
+        } else {
+          ctx.fillStyle = '#1e90ff';
+          ctx.fillRect(x - iconSize / 2, y - iconSize / 2, iconSize, iconSize);
+        }
+
+        // 道具名称
+        ctx.fillStyle = '#ffff00';
+        ctx.font = '24px Arial';
+        ctx.fillText(`获得: ${propNames[finalProp] || finalProp}`, x, y + iconSize / 2 + 40);
       }
     }
 
@@ -794,17 +976,20 @@ export default class GameInfo extends Emitter {
   }
 
   drawGameOverImage(ctx) {
-    ctx.drawImage(
-      atlas,
-      0,
-      0,
-      119,
-      108,
-      SCREEN_WIDTH / 2 - 150,
-      SCREEN_HEIGHT / 2 - 100,
-      300,
-      300
-    );
+    // 只绘制已经加载完成的图片
+    if (atlas && atlas.complete && atlas.naturalWidth > 0) {
+      ctx.drawImage(
+        atlas,
+        0,
+        0,
+        119,
+        108,
+        SCREEN_WIDTH / 2 - 150,
+        SCREEN_HEIGHT / 2 - 100,
+        300,
+        300
+      );
+    }
   }
 
   drawGameOverText(ctx, score) {
@@ -822,22 +1007,51 @@ export default class GameInfo extends Emitter {
   }
 
   drawRestartButton(ctx) {
-    ctx.drawImage(
-      atlas,
-      120,
-      6,
-      39,
-      24,
-      SCREEN_WIDTH / 2 - 60,
-      SCREEN_HEIGHT / 2 - 100 + 180,
-      120,
-      40
-    );
+    // 只绘制已经加载完成的图片
+    if (atlas && atlas.complete && atlas.naturalWidth > 0) {
+      // 重新开始按钮
+      ctx.drawImage(
+        atlas,
+        120,
+        6,
+        39,
+        24,
+        SCREEN_WIDTH / 2 - 60,
+        SCREEN_HEIGHT / 2 - 100 + 180,
+        120,
+        40
+      );
+      // 返回主菜单按钮
+      ctx.drawImage(
+        atlas,
+        120,
+        6,
+        39,
+        24,
+        SCREEN_WIDTH / 2 - 60,
+        SCREEN_HEIGHT / 2 - 100 + 240,
+        120,
+        40
+      );
+    }
     ctx.fillText(
       '重新开始',
       SCREEN_WIDTH / 2 - 40,
       SCREEN_HEIGHT / 2 - 100 + 205
     );
+    ctx.fillText(
+      '返回主菜单',
+      SCREEN_WIDTH / 2 - 48,
+      SCREEN_HEIGHT / 2 - 100 + 265
+    );
+
+    // 保存返回主菜单按钮区域
+    this.backToMainBtnArea = {
+      startX: SCREEN_WIDTH / 2 - 60,
+      startY: SCREEN_HEIGHT / 2 - 100 + 240,
+      endX: SCREEN_WIDTH / 2 + 60,
+      endY: SCREEN_HEIGHT / 2 - 100 + 280
+    };
   }
 
   /**
@@ -882,12 +1096,59 @@ export default class GameInfo extends Emitter {
       endY: y + btnHeight
     };
 
+    // ========== 新增：开发者模式按钮 ==========
+    if (DebugBridge.initialized) {
+      const devBtnWidth = 200;
+      const devBtnHeight = 60;
+      const devX = (SCREEN_WIDTH - devBtnWidth) / 2;
+      const devY = y + btnHeight + 30;
+
+      // 半透明暗色按钮
+      ctx.fillStyle = 'rgba(100, 100, 100, 0.5)';
+      ctx.fillRect(devX, devY, devBtnWidth, devBtnHeight);
+      ctx.strokeStyle = '#666666';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(devX, devY, devBtnWidth, devBtnHeight);
+
+      ctx.fillStyle = '#aaaaaa';
+      ctx.font = '18px Arial';
+      ctx.fillText('开发者模式', devX + devBtnWidth / 2, devY + devBtnHeight / 2 + 6);
+
+      // 保存按钮区域
+      this.devBtnArea = {
+        startX: devX,
+        startY: devY,
+        endX: devX + devBtnWidth,
+        endY: devY + devBtnHeight
+      };
+    }
+    // ==========================================
+
     ctx.textAlign = 'left';
   }
 
   touchEventHandler(event) {
     const { clientX, clientY } = event.touches[0]; // 获取触摸点的坐标
     const databus = GameGlobal.databus;
+
+    // ========== 新增：调试模块触摸处理 ==========
+    const debugResult = DebugBridge.handleTouchIfActive(clientX, clientY);
+    console.log('调试模块触摸结果:', debugResult);
+    if (debugResult === 'back_to_start') {
+      // 返回开始菜单
+      databus.gameState = 'start';
+      return;
+    }
+    if (debugResult === 'start_with_debug') {
+      // 应用调试配置并开始游戏 - 触发main的restart
+      console.log('调试模式：开始游戏，触发重启');
+      this.emit('restart');
+      return;
+    }
+    if (debugResult === 'handled') {
+      return;
+    }
+    // ===========================================
 
     // 游戏开始界面
     if (databus.gameState === 'start') {
@@ -900,6 +1161,17 @@ export default class GameInfo extends Emitter {
         databus.gameState = 'selecting_prop';
         console.log('进入道具选择界面');
       }
+
+      // ========== 新增：开发者模式按钮检测 ==========
+      if (DebugBridge.initialized && this.devBtnArea &&
+          clientX >= this.devBtnArea.startX &&
+          clientX <= this.devBtnArea.endX &&
+          clientY >= this.devBtnArea.startY &&
+          clientY <= this.devBtnArea.endY) {
+        DebugBridge.enterMenu();
+        return;
+      }
+      // ===========================================
       return;
     }
 
@@ -933,9 +1205,9 @@ export default class GameInfo extends Emitter {
       return;
     }
 
-    // 游戏结束时的重新开始按钮
+    // 游戏结束时的重新开始按钮和返回主菜单按钮
     if (databus.isGameOver) {
-      // 检查触摸是否在按钮区域内
+      // 检查触摸是否在重新开始按钮区域内
       if (
         clientX >= this.btnArea.startX &&
         clientX <= this.btnArea.endX &&
@@ -944,6 +1216,17 @@ export default class GameInfo extends Emitter {
       ) {
         // 调用重启游戏的回调函数
         this.emit('restart');
+      }
+      // 检查触摸是否在返回主菜单按钮区域内
+      else if (this.backToMainBtnArea &&
+        clientX >= this.backToMainBtnArea.startX &&
+        clientX <= this.backToMainBtnArea.endX &&
+        clientY >= this.backToMainBtnArea.startY &&
+        clientY <= this.backToMainBtnArea.endY
+      ) {
+        // 返回主菜单，重置游戏状态
+        databus.reset();
+        GameGlobal.main.player.init();
       }
       return;
     }
@@ -1046,48 +1329,93 @@ export default class GameInfo extends Emitter {
    * 处理升级选择界面的触摸
    */
   handleUpgradeSelectionTouch(clientX, clientY) {
+    // 抽奖动画运行时屏蔽触摸
+    if (this.lotteryState.isRunning) {
+      return;
+    }
     const databus = GameGlobal.databus;
-    const options = databus.currentUpgradeOptions || [];
     const btnWidth = 300;
     const btnHeight = 80;
     const padding = 20;
     const startY = 220;
 
-    for (let i = 0; i < options.length; i++) {
-      const y = startY + i * (btnHeight + padding);
-      const x = (SCREEN_WIDTH - btnWidth) / 2;
+    // 处理二级选择界面
+    if (this.upgradeSelectState.isActive) {
+      const props = this.upgradeSelectState.upgradableProps;
+      // 道具选项
+      for (let i = 0; i < props.length; i++) {
+        const y = startY + i * (btnHeight + padding);
+        const x = (SCREEN_WIDTH - btnWidth) / 2;
 
-      if (clientX >= x && clientX <= x + btnWidth &&
-          clientY >= y && clientY <= y + btnHeight) {
-        // 应用升级
-        this.applyUpgrade(i);
-        databus.showUpgradeUI = false;
-        break;
+        if (clientX >= x && clientX <= x + btnWidth &&
+            clientY >= y && clientY <= y + btnHeight) {
+          // 选择了要升级的道具，执行升级
+          const prop = props[i];
+          prop.level++;
+          console.log(`道具升级: ${prop.type} Lv.${prop.level}`);
+          // 重新初始化武器和道具效果
+          GameGlobal.main.player.initWeapons();
+          GameGlobal.main.player.updatePropsEffect();
+          // 关闭界面
+          this.upgradeSelectState.isActive = false;
+          databus.showUpgradeUI = false;
+          return;
+        }
+      }
+
+      // 返回按钮
+      const backY = startY + props.length * (btnHeight + padding) + 20;
+      const backX = (SCREEN_WIDTH - btnWidth) / 2;
+      if (clientX >= backX && clientX <= backX + btnWidth &&
+          clientY >= backY && clientY <= backY + btnHeight) {
+        // 返回一级界面
+        this.upgradeSelectState.isActive = false;
+        return;
+      }
+    } else {
+      // 处理一级选择界面
+      const options = databus.currentUpgradeOptions || [];
+      for (let i = 0; i < options.length; i++) {
+        const y = startY + i * (btnHeight + padding);
+        const x = (SCREEN_WIDTH - btnWidth) / 2;
+
+        if (clientX >= x && clientX <= x + btnWidth &&
+            clientY >= y && clientY <= y + btnHeight) {
+          const option = options[i];
+          if (option.id === 'upgrade_prop') {
+            // 进入二级选择界面
+            this.upgradeSelectState = {
+              isActive: true,
+              upgradableProps: option.upgradableProps
+            };
+          } else {
+            // 其他升级选项，正常应用
+            const shouldClose = this.applyUpgrade(i);
+            if (shouldClose) {
+              databus.showUpgradeUI = false;
+            }
+          }
+          break;
+        }
       }
     }
   }
 
   /**
    * 应用升级效果
+   * @returns {boolean} 是否需要立即关闭升级界面
    */
   applyUpgrade(index) {
     const databus = GameGlobal.databus;
     const player = GameGlobal.main.player;
     const option = databus.currentUpgradeOptions[index];
 
-    if (!option) return;
+    if (!option) return true;
 
     console.log(`选择升级: ${option.name}`);
 
     switch(option.id) {
-      case 'upgrade_prop':
-        // 升级已有道具
-        const prop = databus.propsInventory.find(p => p.type === option.propType);
-        if (prop && prop.level < 6) {
-          prop.level++;
-          console.log(`道具升级: ${option.propType} Lv.${prop.level}`);
-        }
-        break;
+      // upgrade_prop 已移到二级选择界面处理，这里不再需要
 
       case 'random_prop':
         // 获得随机道具 - 先播放抽奖动画
@@ -1099,13 +1427,25 @@ export default class GameInfo extends Emitter {
         if (availableProps.length > 0 && databus.propsInventory.length < 6) {
           const randomType = availableProps[Math.floor(Math.random() * availableProps.length)];
 
-          // 启动抽奖动画
+          // 如果只有一个道具，直接添加，不播放动画
+          if (allProps.length <= 1) {
+            databus.propsInventory.push({
+              type: randomType,
+              level: 1
+            });
+            console.log(`获得随机道具: ${randomType}`);
+            GameGlobal.main.player.initWeapons();
+            GameGlobal.main.player.updatePropsEffect();
+            return true; // 立即关闭界面
+          }
+
+          // 启动抽奖动画，完全帧驱动，无额外定时器
           this.lotteryState = {
             isRunning: true,
             startTime: Date.now(),
-            duration: 2000, // 2秒动画
+            duration: 2000, // 2秒滚动动画
+            flashDuration: 1000, // 1秒闪烁
             currentIndex: 0,
-            lastSwitch: 0,
             allProps: allProps, // 所有道具用于动画切换
             finalProp: randomType, // 最终获得的道具
             callback: (propType) => {
@@ -1118,11 +1458,13 @@ export default class GameInfo extends Emitter {
               // 重新初始化武器和道具效果
               GameGlobal.main.player.initWeapons();
               GameGlobal.main.player.updatePropsEffect();
-            }
+            },
+            isFlashing: false,
+            flashStartTime: 0
           };
 
           // 不立即关闭升级界面，继续显示动画
-          return;
+          return false;
         }
         break;
 
@@ -1180,5 +1522,7 @@ export default class GameInfo extends Emitter {
     // 重新初始化武器和道具效果
     player.initWeapons();
     player.updatePropsEffect();
+
+    return true;
   }
 }

@@ -1,48 +1,12 @@
 import Animation from '../base/animation';
 import { SCREEN_WIDTH, SCREEN_HEIGHT } from '../render';
 import Danmaku from '../bullet/danmaku';
+import { ENEMY_CONFIG } from '../config/level'; // 统一使用全局配置
 
 const ENEMY_IMG_SRC = 'images/enemy.png';
 const ENEMY_WIDTH = 60;
 const ENEMY_HEIGHT = 60;
 const EXPLO_IMG_PREFIX = 'images/explosion';
-
-// 敌机类型配置
-const ENEMY_CONFIG = {
-  'dragonfly': { // 蜻蜓侦察机
-    hp: 5,
-    damage: 1,
-    speed: 4,
-    width: 40,
-    height: 40,
-    dropRate: 0.08,
-    shootInterval: 60,
-    bulletType: 'straight',
-    imgSrc: 'images/enemy_dragonfly.png'
-  },
-  'beetle': { // 甲虫轰炸机
-    hp: 15,
-    damage: 1,
-    speed: 2,
-    width: 60,
-    height: 60,
-    dropRate: 0.1,
-    shootInterval: 90,
-    bulletType: 'scatter',
-    imgSrc: 'images/enemy_beetle.png'
-  },
-  'viper': { // 毒蛇追踪机
-    hp: 5,
-    damage: 1,
-    speed: 3,
-    width: 45,
-    height: 45,
-    dropRate: 0.08,
-    shootInterval: 80,
-    bulletType: 'homing',
-    imgSrc: 'images/enemy_viper.png'
-  }
-};
 
 export default class Enemy extends Animation {
   constructor() {
@@ -58,7 +22,7 @@ export default class Enemy extends Animation {
     this.bulletType = 'straight'; // 弹幕类型
   }
 
-  init(enemyType = 'normal') {
+  init(enemyType = 'normal', x = null) {
     this.enemyType = enemyType;
 
     // 根据类型加载配置
@@ -85,9 +49,15 @@ export default class Enemy extends Animation {
       this.dropRate = 0.1;
     }
 
-    this.x = this.getRandomX();
+    // 如果传入了x坐标就用传入的，否则随机
+    if (x !== null) {
+      this.x = x;
+    } else {
+      this.x = this.getRandomX();
+    }
     this.y = -this.height;
     this.lastShootFrame = 0;
+    this.spawnTime = null; // 重置生成时间，避免对象池复用时超时误判
 
     this.isActive = true;
     this.visible = true;
@@ -112,6 +82,11 @@ export default class Enemy extends Animation {
 
   // 每一帧更新敌人位置
   update() {
+    // 精英怪每30帧输出一次状态调试
+    if (this.dropRate >= 1 && GameGlobal.databus.frame % 30 === 0) {
+      console.log(`精英状态: type=${this.enemyType}, x=${this.x.toFixed(1)}, y=${this.y.toFixed(1)}, isActive=${this.isActive}, visible=${this.visible}, hp=${this.hp}`);
+    }
+
     if (GameGlobal.databus.isGameOver || GameGlobal.databus.isPaused || !this.isActive) {
       return;
     }
@@ -193,6 +168,7 @@ export default class Enemy extends Animation {
   }
 
   destroy() {
+    console.log(`精英怪被销毁: type=${this.enemyType}, x=${this.x?.toFixed(1)}, y=${this.y?.toFixed(1)}, hp=${this.hp}`);
     this.isActive = false;
 
     // 统计波次杀敌数
