@@ -17,7 +17,7 @@ export default class DataBus {
   score = 0; // 当前分数
   experience = 0; // 玩家经验值
   lives = 3; // 剩余生命数
-  playerLevel = 1; // 玩家等级
+  playerLevel = 0; // 玩家等级（初始0，经验达到20升到1级触发第一次升级）
   level = 1; // 当前关卡
   wave = 0; // 当前波次
   propsInventory = []; // 玩家持有的道具（最多6个）
@@ -68,7 +68,7 @@ export default class DataBus {
     this.score = 0; // 当前分数
     this.experience = 0; // 玩家经验值
     this.lives = 3; // 剩余生命数
-    this.playerLevel = 1; // 玩家等级
+    this.playerLevel = 0; // 玩家等级（初始0，经验达到20升到1级触发第一次升级）
     this.level = 1; // 当前关卡
     this.wave = 0; // 当前波次
     this.bullets = []; // 存储玩家子弹
