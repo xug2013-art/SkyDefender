@@ -1,0 +1,15 @@
+# 本地配置文件
+.claude/settings.local.json
+
+# 第三方技能插件
+.claude/skills/hainamchung-agent-assistant-code-reviewer/
+
+# 大图资源和AI生成临时文件
+images_large/
+minimax-output/
+minimax-output-backgrounds-v2/
+
+# 微信开发者工具临时文件
+*.log
+.DS_Store
+node_modules/
